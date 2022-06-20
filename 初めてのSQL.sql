@@ -251,3 +251,158 @@ from actor as a
 cross join film as f
 where a.last_name = 'MONROE' 
 and f.rating = 'PG');
+
+#select 1というのはtrueであるという意味
+select c.first_name,c.last_name
+from customer c
+where exists
+(select 1 from rental r
+where r.customer_id = c.customer_id
+and date(r.rental_date) < '2005-05-25');
+
+select rental_id,rental_date 
+from rental
+where exists 
+(select 1 from rental
+where date(rental_date) > '2005-05-25');
+
+select first_name,last_name,
+case when active = 1 
+then 'ACTIVE'
+else 'INACTIVE'
+end activity_type
+from customer;
+
+select c.first_name,c.last_name,
+case
+when active = 0 then 0
+else
+(select count(*) from rental r where r.customer_id = c.customer_id)
+end num_rental
+from customer c
+order by num_rental;
+
+#月ごとの集計 P207
+select monthname(rental_date) rental_month,count(*) num_rentals
+from rental
+where rental_date between '2005-05-01' and '2005-08-01'
+group by monthname(rental_date); 
+
+#月ごとの集計 P207
+select
+sum(case when monthname(rental_date) = 'May' then 1 else 0 end) May_rentals,
+sum(case when monthname(rental_date) = 'June' then 1 else 0 end) June_rentals,
+sum(case when monthname(rental_date) = 'July' then 1 else 0 end) July_rentals
+from rental
+where rental_date between '2005-05-01' and '2005-08-01';
+
+#サブクエリをcaseで使用する P209
+SELECT f.title,
+case(select count(*) from inventory i where i.film_id = f.film_id)
+when 0 then 'out of stock'
+when 1 then 'scarcs'
+when 2 then 'scarcs'
+when 3 then 'available'
+when 4 then 'available'
+else 'common'
+end film_available
+from film f;
+
+#ゼロ除算を防ぐ P210
+select c.first_name,c.last_name,
+sum(p.amount) tot_payment_amt,
+count(p.amount) num_payments,
+sum(p.amount) / 
+case when count(p.amount) = 0 then 1 else count(p.amount)
+end avg_payment
+from customer c
+left outer join payment p
+on c.customer_id = p.customer_id
+group by c.first_name,c.last_name
+order by avg_payment;
+
+select name,
+case name
+when name in ('English','Italian','French','German') then 'latin1'
+when name in ('Japanese','Mandarin') then 'utf8'
+else 'Unknown'
+end chara_set
+from language;
+
+select
+sum(case when rating = 'PG' then 1 else 0 end) PG
+from film;
+
+alter table customer
+add index idx_email (email);
+
+show index from customer;
+
+show index from actor;
+
+select last_name from actor;
+
+#viewの作り方P244
+create view customer_vw
+(customer_id,
+first_name,
+last_name,
+email)
+as select
+customer_id,
+first_name,
+last_name,
+concat(substr(email,1,2),'*****',substr(email,-4)) email
+from customer;
+
+select * from customer_vw;
+
+#viewの結合 P245
+select cv.first_name,cv.last_name,p.amount
+from customer_vw cv 
+inner join payment p
+on cv.customer_id = p.customer_id
+where p.amount >= 11;
+
+update customer_vw
+set last_name = 'SMITH-ALLEN'
+where customer_id = 1;
+
+#単純なviewなら更新できる
+select first_name,last_name,email
+from customer
+where customer_id = 1;
+
+#tableタイプを調べる P257
+select table_name,table_type
+from information_schema.tables
+where table_schema = 'sakila'
+order by 1;
+
+#四半期ごとにまとめる関数quarter
+select quarter(payment_date) quater,monthname(payment_date) month_nm,
+sum(amount) monthly_sales
+from payment
+where year(payment_date) = 2005
+group by quarter(payment_date),monthname(payment_date);
+
+#局所的な並べ替えP273
+select quarter(payment_date) quater,monthname(payment_date) month_nm,
+  sum(amount) monthly_sales,
+  rank() over (order by sum(amount) desc) sales_rank
+from payment
+where year(payment_date) = 2005
+group by quarter(payment_date), monthname(payment_date)
+order by 1,month_nm;
+
+#自動的に順位つけする関数rank()
+select *,
+rank() over (order by amount desc) as amount_rank
+from payment
+order by amount_rank;
+
+select customer_id,count(*) num_rentals,
+  row_number() over (order by count(*) desc) row_number_rnk,
+  dense_rank() over 
+
+
